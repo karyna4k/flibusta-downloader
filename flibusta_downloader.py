@@ -393,14 +393,19 @@ class SeriesDownloader:
         retries = 3
         for attempt in range(1, retries + 1):
             try:
-                resp = self.client.request("GET", download_path, stream=True)
+                resp = self.client.request("GET", download_path, stream=True, timeout=15)
                 if resp.status_code != 200:
-                    time.sleep(1.5 * attempt)
+                    time.sleep(1.0 * attempt)
                     continue
 
-                content = resp.content
-                if not content or len(content) < 200:
-                    time.sleep(1.5 * attempt)
+                chunks = []
+                for chunk in resp.iter_content(chunk_size=65536):
+                    if chunk:
+                        chunks.append(chunk)
+                content = b"".join(chunks)
+
+                if not content or len(content) < 100:
+                    time.sleep(1.0 * attempt)
                     continue
 
                 # Если это FB2 и не запрошено сохранение raw zip — распаковываем
@@ -475,10 +480,13 @@ class SeriesDownloader:
                             total_bytes += b_size
                         else:
                             fail_count += 1
+                        progress.console.print(f"  {message}")
                         results.append((success, message))
                     except Exception as exc:
                         fail_count += 1
-                        results.append((False, f"[red]Критическая ошибка для '{book['title']}': {exc}[/red]"))
+                        err_msg = f"[red]Критическая ошибка для '{book['title']}': {exc}[/red]"
+                        progress.console.print(f"  {err_msg}")
+                        results.append((False, err_msg))
 
         elapsed = max(time.time() - start_time, 0.1)
         speed_mb_s = (total_bytes / (1024 * 1024)) / elapsed
