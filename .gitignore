@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+downloads/
+*.fb2
+*.epub
+*.mobi
+*.pdf
+*.zip
+.vscode/
+.idea/
